@@ -47,7 +47,9 @@ switchtube_tbl
 
 Note that the key_value_pairs column contains several pairs separated by semi-colons. For example:
 ```{r, warning=FALSE}
-switchtube_tbl[1,"key_value_pairs"]
+switchtube_tbl %>% 
+  slice(1) %>% # take just the first column
+  select(key_value_pairs)
 ```
 Here, the id at the start of the string is the event_id. The key value pairs for each event are spread across multiple rows because there is a limit on the length of the key_value_pairs string that we can send back in logs. So these logs needs to be joined by event_id.
 
