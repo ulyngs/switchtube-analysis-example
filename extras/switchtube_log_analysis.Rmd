@@ -1,0 +1,144 @@
+---
+title: "switchtube_log_analysis"
+author: "Kai Lukoff"
+date: "5/13/2021"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse=TRUE)
+```
+
+## Introduction
+
+This RMarkdown shows the cleaning and analysis of the log data for the SwitchTube mobile app.
+
+Log data is stored ion BigQuery in a SQL database from where it can be downloaded in JSON format. The JSON data is complex and nested and therefore first needs to be cleaned before analysis.
+
+The desired data format is like this:
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+desired_df <- tibble::tribble(
+  ~event_id, ~param_device, ~action, ~param_video_id, ~Pets_Animals, ~etc,
+  "247974748",   "Motorola E (4)",  "video_started",   "2B30zHE7DJ0",   "1",   "etc",
+  "1745499870",   "Motorola E (4)",  "NA",   "NA",   "NA",   "etc",
+  "850539252",   "Android Nexus VI",  "video_ended",   "9OIJOISF81",   "NA",   "etc",
+  "etc", "etc",  "etc", "etc",  "etc", "etc",
+)
+desired_df
+```
+
+Libraries required for data cleaning:
+```{r libraries, message=FALSE}
+library("jsonlite")
+library("tidyverse")
+```
+
+
+## Data import
+Import the JSON data as a tibble
+```{r import_json}
+
+switchtube_tbl <- as_tibble(jsonlite::fromJSON("results-20210506-134120.json"))
+```
+
+Show data after import
+```{r, warning=FALSE}
+switchtube_tbl
+```
+Note that the event_params column contains nested dataframes that first need to be unnested to get at the right data.
+
+# Data cleaning steps
+1) Filter rows for only events that are study events
+```{r}
+switchtube_tbl2 <- switchtube_tbl %>% dplyr::filter(event_name == "study_event")
+```
+
+2) Select columns for only the event params column
+```{r}
+switchtube_tbl3 <- switchtube_tbl2 %>% select(event_params)
+```
+
+3) Flatten the data in the event_params column of the dataset (want just the study event data)
+```{r}
+switchtube_tbl4 <- as_tibble(unnest_longer(switchtube_tbl3,event_params))
+```
+
+4) Filter rows where event_params.key == study_event_data
+```{r}
+switchtube_tbl5 <- switchtube_tbl4 %>% dplyr::filter(event_params$key == "study_event_data")
+```
+Note: need to use dollar sign instead of period in the column name when filtering
+
+5) Filter rows where event_params.key == study_event_data
+```{r}
+switchtube_tbl5 <- switchtube_tbl4 %>% dplyr::filter(event_params$key == "study_event_data")
+```
+
+6) Select columns for only the event params column
+```{r}
+switchtube_tbl6 <- as_tibble(switchtube_tbl5$event_params$value$string_value)
+```
+For some reason, this version returns an error: switchtube_tbl6 <- switchtube_tbl5 %>% select(event_params$value$string_value)
+
+7) Add semi-colon to the end of each entry (should make it easier to deal with the merge later on)
+```{r}
+switchtube_tbl6$value <- paste0(switchtube_tbl6$value, ";")
+```
+
+8) Split columns at the semi-colon (into event_id and logs) using separate function in library(tidyr)
+```{r}
+switchtube_tbl7 <- switchtube_tbl6 %>% tidyr::separate(value, into = c("event_id", "logs"), sep = ";", extra="merge")
+```
+Source: https://stackoverflow.com/questions/55748363/how-to-split-a-dataframe-column-by-the-first-instance-of-a-character-in-its-valu
+
+9) Group by event ID and unite results
+```{r}
+switchtube_tbl8 <- switchtube_tbl7 %>% group_by(event_id) %>% mutate(grouped_logs = paste0(logs, collapse = ""))
+```
+
+10) Select columns for only the event ID and united_results
+```{r}
+switchtube_tbl9 <- switchtube_tbl8 %>% select(event_id,grouped_logs)
+```
+
+11) De-duplicate rows
+```{r}
+switchtube_tbl10 <- switchtube_tbl9 %>% unique()
+```
+
+12) Remove final semi-colon from grouped-logs
+```{r}
+switchtube_tbl10$grouped_logs <- substr(switchtube_tbl10$grouped_logs,
+                       start= 1, 
+                       stop= nchar(switchtube_tbl10$grouped_logs)-1)
+```
+
+12) Remove id= from values in the event_id column
+```{r}
+switchtube_tbl10$event_id <- substr(switchtube_tbl10$event_id,
+                       start= 4, 
+                       stop= nchar(switchtube_tbl10$event_id))
+```
+
+## Current data
+Show data after the above cleaning operations
+```{r, warning=FALSE}
+switchtube_tbl10
+```
+
+The grouped_logs column contains many key-value pairs separated by semi-colons. For example:
+```{r, warning=FALSE}
+switchtube_tbl10[1,2]
+# not sure how to get this to print the entire string here rather than a shortened version
+```
+Here, the key is Pets + Animals and the value is NA. Most values are NA, because for most event_ids that particular action was not performed (the Pets + Animals feed was not clicked). This will be a sparse dataset.
+
+## Remaining to-dos to get into desired format
+1. Separate grouped_logs column on semi-colon - use library(splitstackshape)? check: does each event_id have the same number of logs?
+2. Create a column for each key, then add the values to that column
+3. Reduce size of sample dataset
+
+## Fixed issues
+* Remove semi-colon from end of grouped-logs
+* Export flattened data over a wider date range

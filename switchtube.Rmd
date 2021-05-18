@@ -1,0 +1,138 @@
+---
+title: "switchtube"
+author: "Kai Lukoff"
+date: "5/14/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set()
+```
+
+## Introduction
+
+This RMarkdown shows the wrangling and analysis of the log data for the SwitchTube mobile app.
+
+Log data is stored ion BigQuery in a SQL database from where it can be downloaded in CSV format. This data can be downloaded using the "final_flattened_study_events" query template that is saved to the project queries on BigQuery.
+
+The CSV data needs to be wrangled into shape before analysis. This could probably also be done in SQL, but Kai finds it much easier to do this work using R.
+
+The desired data format is like this:
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+desired_df <- tibble::tribble(
+  ~event_id, ~param_device, ~action, ~param_video_id, ~Pets_Animals, ~etc,
+  "247974748",   "Motorola E (4)",  "video_started",   "2B30zHE7DJ0",   "1",   "etc",
+  "1745499870",   "Motorola E (4)",  "NA",   "NA",   "NA",   "etc",
+  "850539252",   "Android Nexus VI",  "video_ended",   "9OIJOISF81",   "NA",   "etc",
+  "etc", "etc",  "etc", "etc",  "etc", "etc",
+)
+desired_df
+```
+
+## Data import
+Libraries required for data cleaning:
+```{r libraries, message=FALSE}
+library("tidyverse")
+```
+
+Import the CSV data as a tibble
+```{r import_csv}
+switchtube_tbl <- as_tibble(read.csv("full_results.csv"))
+```
+
+Show data after import
+```{r, warning=FALSE}
+print(switchtube_tbl,n = 3)
+```
+
+Note that the key_value_pairs column contains several pairs separated by semi-colons. For example:
+```{r, warning=FALSE}
+switchtube_tbl[1,"key_value_pairs"]
+```
+Here, the id at the start of the string is the event_id. The key value pairs for each event are spread across multiple rows because there is a limit on the length of the key_value_pairs string that we can send back in logs. So these logs needs to be joined by event_id.
+
+The other key-value pairs are the logs. Many values are NA, because for most event_ids only one or two out of all possible actions were performed and the rest were not performed (that button was not clicked). This should be a sparse dataset.
+
+# Data wrangling steps
+
+Add semi-colon to the end of the string of key-value pairs (this will ensure that a semi-colon separates all pairs after the data is joined)
+```{r}
+switchtube_tbl$key_value_pairs <- paste0(switchtube_tbl$key_value_pairs, ";")
+```
+
+Split columns at the semi-colon (into event_id and key_value_pairs) using separate function in library(tidyr)
+```{r}
+switchtube_tbl2 <- switchtube_tbl %>% tidyr::separate(key_value_pairs, into = c("event_id", "key_value_pairs"), sep = ";", extra="merge",remove=TRUE)
+```
+Source: https://stackoverflow.com/questions/55748363/how-to-split-a-dataframe-column-by-the-first-instance-of-a-character-in-its-valu
+
+Group by event ID and unite results
+```{r}
+switchtube_tbl3 <- switchtube_tbl2 %>% group_by(event_id) %>% mutate(grouped_key_value_pairs = paste0(key_value_pairs, collapse = ""))
+```
+
+De-select the key_value_pairs column
+```{r}
+switchtube_tbl4 <- switchtube_tbl3 %>% select(-c(key_value_pairs))
+```
+
+Arrange the grouped_key_value_pairs column in the front for easier reading
+```{r}
+switchtube_tbl4 <- switchtube_tbl4 %>% relocate(event_id,grouped_key_value_pairs)
+```
+
+De-duplicate rows
+```{r}
+switchtube_tbl5 <- switchtube_tbl4 %>% distinct(event_id, .keep_all = TRUE)
+```
+
+Remove final semi-colon from grouped_key_value_pairs
+```{r}
+switchtube_tbl5$grouped_key_value_pairs <- substr(switchtube_tbl5$grouped_key_value_pairs,
+                       start= 1, 
+                       stop= nchar(switchtube_tbl5$grouped_key_value_pairs)-1)
+```
+
+Remove "id=" from values in the event_id column
+```{r}
+switchtube_tbl5$event_id <- substr(switchtube_tbl5$event_id,
+                       start= 4, 
+                       stop= nchar(switchtube_tbl5$event_id))
+```
+
+The grouped_key_value_pairs column contains many key-value pairs separated by semi-colons. For example:
+```{r, warning=FALSE}
+switchtube_tbl5[1,"grouped_key_value_pairs"]
+```
+
+Split the grouped_key_value_pairs column of key-value pairs into new, separate columns:
+```{r, warning=FALSE}
+KVsep <- fixed(";")  #key-value separator
+Vsep <- fixed("=")     #value separator
+
+switchtube_tbl6 <-  switchtube_tbl5 %>%
+  mutate(KVpairs = str_split(grouped_key_value_pairs, KVsep)) %>%
+  unnest(KVpairs) %>%
+  separate(KVpairs, into = c("key", "value"), Vsep) %>%
+  spread(key, value) %>%
+  select(-grouped_key_value_pairs)
+
+# drop "param_" from the column names
+colnames(switchtube_tbl6) <- gsub("param_","",colnames(switchtube_tbl6))
+```
+Based on this q&a: https://stackoverflow.com/questions/53876274/split-dataframe-column-of-separated-key-value-pairs-into-new-columns
+
+## Final wrangled data format
+```{r, warning=FALSE}
+print(switchtube_tbl6,n = 3,width = 110)
+```
+
+
+## Remaining to-dos to get into desired format
+* done!
+
+## Fixed issues
+* Remove semi-colon from end of grouped-logs
+* Export flattened data over a wider date range
+* Separate grouped_logs column on semi-colon - use library(splitstackshape)? check: does each event_id have the same number of logs?
+* Create a column for each key, then add the values to that column
