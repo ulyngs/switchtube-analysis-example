@@ -42,7 +42,7 @@ switchtube_tbl <- read_csv("full_results.csv")
 
 Show data after import
 ```{r, warning=FALSE}
-print(switchtube_tbl,n = 3)
+switchtube_tbl
 ```
 
 Note that the key_value_pairs column contains several pairs separated by semi-colons. For example:
