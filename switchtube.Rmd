@@ -38,6 +38,8 @@ library("tidyverse")
 Import the CSV data as a tibble
 ```{r import_csv}
 switchtube_tbl <- read_csv("full_results.csv")
+
+switchtube_ulrik <- read_csv("full_results.csv")
 ```
 
 Show data after import
@@ -60,6 +62,12 @@ The other key-value pairs are the logs. Many values are NA, because for most eve
 Add semi-colon to the end of the string of key-value pairs (this will ensure that a semi-colon separates all pairs after the data is joined)
 ```{r}
 switchtube_tbl$key_value_pairs <- paste0(switchtube_tbl$key_value_pairs, ";")
+
+
+# the tidyverse way of doing this:
+switchtube_ulrik %>% 
+  mutate(key_value_pairs = str_c(key_value_pairs, ";"))
+
 ```
 
 Split columns at the semi-colon (into event_id and key_value_pairs) using separate function in library(tidyr)
