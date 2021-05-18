@@ -37,7 +37,7 @@ library("tidyverse")
 
 Import the CSV data as a tibble
 ```{r import_csv}
-switchtube_tbl <- as_tibble(read.csv("full_results.csv"))
+switchtube_tbl <- read_csv("full_results.csv")
 ```
 
 Show data after import
