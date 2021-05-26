@@ -153,8 +153,23 @@ switchtube_tbl6 <-  switchtube_tbl5 %>%
   spread(key, value) %>%
   select(-grouped_key_value_pairs)
 
+# the tidy'er version
+switchtube_tbl5 %>%
+  mutate(KVpairs = str_split(grouped_key_value_pairs, ";")) %>% 
+  unnest(KVpairs) %>% 
+  separate(KVpairs, into = c("key", "value"), "=") %>% 
+  pivot_wider(names_from = key,  values_from = value) %>% 
+  select(-grouped_key_value_pairs)
+
+  # see vignette("pivot")
+
 # drop "param_" from the column names
 colnames(switchtube_tbl6) <- gsub("param_","",colnames(switchtube_tbl6))
+
+# the tidyverse way
+switchtube_tbl6 %>% 
+  rename_with(~str_remove(., "param_"))
+
 ```
 Based on this q&a: https://stackoverflow.com/questions/53876274/split-dataframe-column-of-separated-key-value-pairs-into-new-columns
 
