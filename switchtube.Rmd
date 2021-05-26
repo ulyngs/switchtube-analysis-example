@@ -114,7 +114,7 @@ switchtube_tbl5 <- switchtube_tbl4 %>% distinct(event_id, .keep_all = TRUE)
 ```
 
 Remove final semi-colon from grouped_key_value_pairs
-```{r}
+```{r test-me}
 switchtube_tbl5 %>% 
   mutate(grouped_key_value_pairs = str_remove(grouped_key_value_pairs, ";$"))
 
@@ -123,11 +123,17 @@ switchtube_tbl5$grouped_key_value_pairs <- substr(switchtube_tbl5$grouped_key_va
                        stop= nchar(switchtube_tbl5$grouped_key_value_pairs)-1)
 ```
 
+See fig. \@(some-label)
+
 Remove "id=" from values in the event_id column
 ```{r}
 switchtube_tbl5$event_id <- substr(switchtube_tbl5$event_id,
                        start= 4, 
                        stop= nchar(switchtube_tbl5$event_id))
+
+
+switchtube_tbl5 %>% 
+  mutate(event_id = str_remove(event_id, "id="))
 ```
 
 The grouped_key_value_pairs column contains many key-value pairs separated by semi-colons. For example:
