@@ -32,7 +32,7 @@ desired_df
 ## Data import
 Libraries required for data cleaning:
 ```{r libraries, message=FALSE}
-library("tidyverse")
+library(tidyverse)
 ```
 
 Import the CSV data as a tibble
@@ -48,11 +48,14 @@ switchtube_tbl
 ```
 
 Note that the key_value_pairs column contains several pairs separated by semi-colons. For example:
+
 ```{r, warning=FALSE}
 switchtube_tbl %>% 
-  slice(1) %>% # take just the first column
+  slice(1) %>% 
   select(key_value_pairs)
+
 ```
+
 Here, the id at the start of the string is the event_id. The key value pairs for each event are spread across multiple rows because there is a limit on the length of the key_value_pairs string that we can send back in logs. So these logs needs to be joined by event_id.
 
 The other key-value pairs are the logs. Many values are NA, because for most event_ids only one or two out of all possible actions were performed and the rest were not performed (that button was not clicked). This should be a sparse dataset.
@@ -63,7 +66,6 @@ Add semi-colon to the end of the string of key-value pairs (this will ensure tha
 ```{r}
 switchtube_tbl$key_value_pairs <- paste0(switchtube_tbl$key_value_pairs, ";")
 
-
 # the tidyverse way of doing this:
 switchtube_ulrik %>% 
   mutate(key_value_pairs = str_c(key_value_pairs, ";"))
@@ -73,12 +75,27 @@ switchtube_ulrik %>%
 Split columns at the semi-colon (into event_id and key_value_pairs) using separate function in library(tidyr)
 ```{r}
 switchtube_tbl2 <- switchtube_tbl %>% tidyr::separate(key_value_pairs, into = c("event_id", "key_value_pairs"), sep = ";", extra="merge",remove=TRUE)
+
+switchtube_ulrik %>% 
+  separate(key_value_pairs, into = c("event_id", "key_value_pairs"), sep = ";", extra="merge", remove=TRUE)
+
 ```
 Source: https://stackoverflow.com/questions/55748363/how-to-split-a-dataframe-column-by-the-first-instance-of-a-character-in-its-valu
 
 Group by event ID and unite results
 ```{r}
-switchtube_tbl3 <- switchtube_tbl2 %>% group_by(event_id) %>% mutate(grouped_key_value_pairs = paste0(key_value_pairs, collapse = ""))
+switchtube_tbl3 <- switchtube_tbl2 %>% 
+  group_by(event_id) %>% 
+  mutate(grouped_key_value_pairs = paste0(key_value_pairs, collapse = ""))
+
+switchtube_ulrik2 <- switchtube_ulrik %>% 
+  # pull out the event id, and the event info
+  mutate(event_id = str_extract(key_value_pairs, "id=[-]?\\d+"),
+         event_info = str_remove(key_value_pairs, "id=[-]?\\d+;")) %>% 
+  select(-key_value_pairs)
+
+
+
 ```
 
 De-select the key_value_pairs column
