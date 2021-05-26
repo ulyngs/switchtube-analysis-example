@@ -100,7 +100,7 @@ switchtube_ulrik2 <- switchtube_ulrik %>%
 
 De-select the key_value_pairs column
 ```{r}
-switchtube_tbl4 <- switchtube_tbl3 %>% select(-c(key_value_pairs))
+switchtube_tbl4 <- switchtube_tbl3 %>% select(-key_value_pairs)
 ```
 
 Arrange the grouped_key_value_pairs column in the front for easier reading
