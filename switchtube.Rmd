@@ -10,7 +10,7 @@ knitr::opts_chunk$set()
 ```
 
 ## Introduction
-Let's eat lots of strawberries!
+Let's go jump in the sea really on our bellies that are full of jellies!
 
 Add a line here!
 
