@@ -10,7 +10,7 @@ knitr::opts_chunk$set()
 ```
 
 ## Introduction
-Let's make a change to the intro text from Kai's local.
+Let's eat lots of strawberries!
 
 Add a line here!
 
