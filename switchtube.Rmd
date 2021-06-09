@@ -10,7 +10,7 @@ knitr::opts_chunk$set()
 ```
 
 ## Introduction
-Let's eat lots of strawberries!
+Let's eat lots of strawberries! And blueberries too!
 
 Add a line here!
 
