@@ -12,7 +12,7 @@ knitr::opts_chunk$set()
 ## Introduction
 Let's eat lots of strawberries in our bellies that are full of jellies!
 
-Add a line here!
+Add a line here! Belly!
 
 This RMarkdown shows the wrangling and analysis of the log data for the SwitchTube mobile app.
 
