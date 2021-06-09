@@ -11,6 +11,8 @@ knitr::opts_chunk$set()
 
 ## Introduction
 
+Add a line here!
+
 This RMarkdown shows the wrangling and analysis of the log data for the SwitchTube mobile app.
 
 Log data is stored ion BigQuery in a SQL database from where it can be downloaded in CSV format. This data can be downloaded using the "final_flattened_study_events" query template that is saved to the project queries on BigQuery.
